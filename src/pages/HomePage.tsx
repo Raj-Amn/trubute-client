@@ -16,7 +16,7 @@ const HomePage: React.FC = () => {
     <>
       {/* <HeroSection /> */}
       <MemorialForm />
-      <FeaturedTributes/>
+      {/* <FeaturedTributes/> */}
       {/* <ObituaryList /> */}
     </>
   );
