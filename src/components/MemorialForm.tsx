@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import {
-  Box,
-  Button,
-  Container,
-  TextField,
-  Typography,
-  Paper,
-  Stack,
+import { 
+  Box, 
+  Button, 
+  Container, 
+  TextField, 
+  Typography, 
+  Paper, 
+  Stack 
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
@@ -22,20 +22,15 @@ const MemorialForm: React.FC = () => {
       return;
     }
     // Navigate with query params
-    navigate(
-      `/create-trubute?first=${encodeURIComponent(firstName)}&last=${encodeURIComponent(lastName)}`,
-    );
+    navigate(`/create-trubute?first=${encodeURIComponent(firstName)}&last=${encodeURIComponent(lastName)}`);
   };
   return (
     <Box
       sx={{
-        backgroundImage: "url('/images/cathy-mu--6gbnkhFtKo-unsplash.jpg')",
-        // backgroundImage: "url('/images/jake-colling--dbAuw_PsuQ-unsplash.jpg')",
-        // backgroundImage: "url('/images/suhail-mir-t7qzgn4cPo8-unsplash.jpg')",
-        // backgroundImage: "url('/images/aman.png')",
+        backgroundImage: "url('/images/clouds-bg.jpg')", // optional background
         backgroundSize: "cover",
-        backgroundPosition: "right 50%",
-       // minHeight: "60vh",
+        backgroundPosition: "center",
+      
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -51,13 +46,16 @@ const MemorialForm: React.FC = () => {
           // maxWidth: 800,
           textAlign: "center",
           backdropFilter: "blur(6px)",
-          backgroundColor: "rgba(255, 255, 255, 0.45)",
+          backgroundColor: "rgba(255, 255, 255, 0.9)",
         }}
       >
         <Typography variant="h4" fontWeight={600} gutterBottom>
           Create a Memorial Website
         </Typography>
-        <Typography variant="subtitle1" sx={{ color: "text.secondary", mb: 4 }}>
+        <Typography
+          variant="subtitle1"
+          sx={{ color: "text.secondary", mb: 4 }}
+        >
           PRESERVE AND SHARE MEMORIES OF YOUR LOVED ONE
         </Typography>
 
