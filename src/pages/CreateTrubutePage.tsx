@@ -30,7 +30,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import dayjs from "dayjs";
- 
+
 import { Card, CardContent, Grid } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { useCreateMemorial } from "../api/memorialApi";
@@ -221,12 +221,9 @@ const StepThreePlan: React.FC<StepThreePlanProps> = ({ lovedOneForm }) => {
           {lovedOneForm.formState.errors.plan.message}
         </Typography>
       )}
-
     </Box>
   );
 };
-
-
 
 interface StepFourPrivacyProps {
   lovedOneForm: any;
@@ -318,8 +315,8 @@ const StepFourPrivacy: React.FC<StepFourPrivacyProps> = ({ lovedOneForm }) => {
                   }
                 />
                 <Typography variant="body2" color="text.secondary">
-                  This option allows easy access and collaboration.
-                  Recommended for most memorials.
+                  This option allows easy access and collaboration. Recommended
+                  for most memorials.
                 </Typography>
               </CardContent>
             </Card>
@@ -384,8 +381,6 @@ const StepFourPrivacy: React.FC<StepFourPrivacyProps> = ({ lovedOneForm }) => {
   );
 };
 
-
-
 // --- Form Schemas ---
 const signupSchema = z.object({
   firstName: z.string().min(1, "First name required"),
@@ -424,6 +419,10 @@ const lovedOneSchema = z.object({
   passedCity: z.string().optional(),
   passedState: z.string().optional(),
   passedCountry: z.string().optional(),
+  status: z.string().optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  location: z.string().optional(),
 });
 
 export type SignupFormData = z.infer<typeof signupSchema>;
@@ -433,11 +432,11 @@ export const CreateTributePage: React.FC = () => {
   const { search } = useLocation();
   const params = new URLSearchParams(search);
   useEffect(() => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    setActiveStep(1);
-  }
-}, []);
+    const token = localStorage.getItem("token");
+    if (token) {
+      setActiveStep(1);
+    }
+  }, []);
 
   const first = params.get("first") || "";
   const last = params.get("last") || "";
@@ -581,7 +580,6 @@ interface StepOneSignupProps {
   errors: FieldErrors<SignupFormData>;
   onSubmit: () => void;
 }
-
 
 const StepOneSignup: React.FC<StepOneSignupProps> = ({
   control,
@@ -734,7 +732,6 @@ interface StepTwoLovedOneProps {
   errors: FieldErrors<LovedOneFormData>;
   onSubmit: () => void;
 }
-
 
 const relationshipOptions = [
   "Mother",
@@ -992,11 +989,85 @@ const StepTwoLovedOne: React.FC<StepTwoLovedOneProps> = ({
                   mb={1}
                   color="#0b2c52"
                 >
-                  This information can also be updated later:
+                  Additional Information (can be updated later)
                 </Typography>
 
+                {/* --- Extra Profile Details --- */}
+                <Stack spacing={2} mb={2}>
+                  <Controller
+                    name="title"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="Title"
+                        size="small"
+                        fullWidth
+                      />
+                    )}
+                  />
+
+                  <Controller
+                    name="description"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="Short Description"
+                        size="small"
+                        multiline
+                        rows={3}
+                        fullWidth
+                      />
+                    )}
+                  />
+
+                  <Controller
+                    name="location"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="Address / Location"
+                        size="small"
+                        fullWidth
+                      />
+                    )}
+                  />
+
+                  <Controller
+                    name="moreDetails"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="More Details (optional)"
+                        size="small"
+                        multiline
+                        rows={3}
+                        fullWidth
+                      />
+                    )}
+                  />
+
+                  <Controller
+                    name="specialDesignation"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="Special Designation"
+                        size="small"
+                        fullWidth
+                      />
+                    )}
+                  />
+
+
+                </Stack>
+
                 {/* --- Born Section --- */}
-                <Typography variant="body2" fontWeight={500}>
+                <Typography variant="body2" fontWeight={600} mt={3}>
                   Born
                 </Typography>
 
@@ -1040,7 +1111,7 @@ const StepTwoLovedOne: React.FC<StepTwoLovedOneProps> = ({
                       <TextField
                         {...field}
                         select
-                        label="State / Area"
+                        label="State"
                         size="small"
                         fullWidth
                       >
@@ -1048,8 +1119,8 @@ const StepTwoLovedOne: React.FC<StepTwoLovedOneProps> = ({
                           "California",
                           "Texas",
                           "Florida",
-                          "Maharashtra",
                           "Ontario",
+                          "Maharashtra",
                         ].map((state) => (
                           <MenuItem key={state} value={state}>
                             {state}
@@ -1087,7 +1158,7 @@ const StepTwoLovedOne: React.FC<StepTwoLovedOneProps> = ({
                 </Stack>
 
                 {/* --- Passed Away Section --- */}
-                <Typography variant="body2" fontWeight={500} mt={2}>
+                <Typography variant="body2" fontWeight={600} mt={3}>
                   Passed Away
                 </Typography>
 
@@ -1131,7 +1202,7 @@ const StepTwoLovedOne: React.FC<StepTwoLovedOneProps> = ({
                       <TextField
                         {...field}
                         select
-                        label="State / Area"
+                        label="State"
                         size="small"
                         fullWidth
                       >
@@ -1139,8 +1210,8 @@ const StepTwoLovedOne: React.FC<StepTwoLovedOneProps> = ({
                           "California",
                           "Texas",
                           "Florida",
-                          "Maharashtra",
                           "Ontario",
+                          "Maharashtra",
                         ].map((state) => (
                           <MenuItem key={state} value={state}>
                             {state}

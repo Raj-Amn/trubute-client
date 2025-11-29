@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Box,
   Tabs,
@@ -7,7 +7,15 @@ import {
   Paper,
   Grid,
   Avatar,
+  Button,
+  TextField,
+  Skeleton,
 } from "@mui/material";
+import axiosInstance from "../api/axiosInstance";
+import { useAuth } from "../hooks/useAuth";
+import MessageTributes from "./MessageTributes";
+import AudioTributes from "./AudioTributes";
+import AboutTab from "./AboutTab";
 
 interface MemorialTabsProps {
   memorial: any;
@@ -24,6 +32,26 @@ const TabPanel = ({ value, index, children }: any) => {
 
 const MemorialTabs = ({ memorial, tributes }: MemorialTabsProps) => {
   const [tab, setTab] = useState(0);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoDescription, setPhotoDescription] = useState("");
+  const { user } = useAuth();
+  console.log(user,'user')
+  console.log(memorial,'memorial')
+  const isUser=user.id===memorial.createdBy
+  const uploadPhoto = async () => {
+    if (!photoFile) return alert("Please select a photo");
+
+    const formData = new FormData();
+    formData.append("media", photoFile);
+    formData.append("caption", photoDescription);
+
+    await axiosInstance.post(`/memorial/${memorial._id}/media`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+
+    resetPhotos();
+    loadPhotos(); // refresh list immediately
+  };
 
   const handleChange = (_: any, newValue: number) => setTab(newValue);
 
@@ -32,13 +60,70 @@ const MemorialTabs = ({ memorial, tributes }: MemorialTabsProps) => {
   const videoTributes = tributes.filter((t) => t.type === "video");
   const audioTributes = tributes.filter((t) => t.type === "audio");
 
+  const [photos, setPhotos] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  const loadPhotos = async () => {
+    if (!hasMore || loading) return;
+
+    setLoading(true);
+
+    const res = await axiosInstance.get(
+      `/memorial/${memorial._id}/media?type=photo&page=${page}&limit=10`
+    );
+
+    setPhotos((prev) => [...prev, ...res.data.data]);
+    setHasMore(res.data.hasMore);
+    setPage((prev) => prev + 1);
+    setLoading(false);
+  };
+
+  const hasLoadedRef = useRef(false);
+
+  // Load photos when entering the Photos tab
+  useEffect(() => {
+    if (tab === 2 && !hasLoadedRef.current) {
+      resetPhotos();
+      loadPhotos();
+      hasLoadedRef.current = true;
+    }
+  }, [tab]);
+
+  // Reset on tab open or after upload
+  const resetPhotos = () => {
+    setPhotos([]);
+    setPage(1);
+    setHasMore(true);
+  };
+
+  // Infinite Scroll Listener
+  useEffect(() => {
+    if (tab !== 2) return;
+
+    const handleScroll = () => {
+      if (
+        window.innerHeight + window.scrollY >=
+          document.body.offsetHeight - 300 &&
+        hasMore &&
+        !loading
+      ) {
+        loadPhotos();
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [tab, hasMore, loading]);
+
   return (
     <Paper
       sx={{
         mt: 6,
         borderRadius: 3,
-        padding:2,
-        
+        padding: 2,
+
         backgroundColor: "#fdfaf6",
         overflow: "hidden",
       }}
@@ -73,237 +158,163 @@ const MemorialTabs = ({ memorial, tributes }: MemorialTabsProps) => {
         <Tab label="Audio" />
       </Tabs>
 
-{/* ABOUT TAB */}
-<TabPanel value={tab} index={0}>
-  <Box
-    sx={{
-      display: "flex",
-      flexDirection: "column",
-      gap: 3,
-      p: 2,
-    }}
-  >
-    {/* Heading */}
-    <Typography
-      variant="h4"
-      fontWeight={700}
-      sx={{
-        color: "#0b2c52",
-        mb: 1,
-        textAlign: "center",
-      }}
-    >
-      Honoring the Life of {memorial.firstName} {memorial.middleName} {memorial.lastName}
-    </Typography>
+      {/* ABOUT TAB */}
 
-    {/* PERSONAL INFO CARD */}
-    <Paper
-      elevation={3}
-      sx={{
-        p: 3,
-        borderRadius: 4,
-        background: "#f7f9fc",
-      }}
-    >
-      <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
-        Personal Details
-      </Typography>
+       <TabPanel value={tab} index={0}>
+        <AboutTab memorial={memorial} />
+       </TabPanel>
 
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-        <Typography>
-          <strong>Full Name:</strong> {memorial.firstName}{" "}
-          {memorial.middleName || ""} {memorial.lastName}
-        </Typography>
-
-        <Typography>
-          <strong>Gender:</strong> {memorial.gender || "—"}
-        </Typography>
-
-        <Typography>
-          <strong>Relationship to You:</strong>{" "}
-          {memorial.relationshipOther || memorial.relationship}
-        </Typography>
-
-        <Typography>
-          <strong>Role in Family / Society:</strong>{" "}
-          {memorial.designationOther || memorial.designation}
-        </Typography>
-
-        {memorial.specialDesignation && (
-          <Typography>
-            <strong>Special Honor:</strong> {memorial.specialDesignation}
-          </Typography>
-        )}
-      </Box>
-    </Paper>
-
-    {/* BIRTH INFO CARD */}
-    <Paper
-      elevation={3}
-      sx={{
-        p: 3,
-        borderRadius: 4,
-        background: "#fef6f7",
-      }}
-    >
-      <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
-        Birth Information
-      </Typography>
-
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-        <Typography>
-          <strong>Date of Birth:</strong> {memorial.bornDay}-{memorial.bornMonth}-{memorial.bornYear}
-        </Typography>
-
-        <Typography>
-          <strong>Birthplace:</strong>{" "}
-          {memorial.bornCity || "—"}, {memorial.bornState || "—"}, {memorial.bornCountry || "—"}
-        </Typography>
-      </Box>
-    </Paper>
-
-    {/* PASSING INFO CARD */}
-    <Paper
-      elevation={3}
-      sx={{
-        p: 3,
-        borderRadius: 4,
-        background: "#f5f7ff",
-      }}
-    >
-      <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
-        In Loving Memory
-      </Typography>
-
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-        <Typography>
-          <strong>Date of Passing:</strong> {memorial.passedDay}-{memorial.passedMonth}-{memorial.passedYear}
-        </Typography>
-
-        <Typography>
-          <strong>Place:</strong>{" "}
-          {memorial.passedCity || "—"}, {memorial.passedState || "—"}, {memorial.passedCountry || "—"}
-        </Typography>
-      </Box>
-    </Paper>
-
-    {/* LEGACY CARD */}
-    <Paper
-      elevation={3}
-      sx={{
-        p: 3,
-        borderRadius: 4,
-        background: "#fff8e8",
-      }}
-    >
-      <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
-        Their Legacy
-      </Typography>
-
-      <Typography sx={{ lineHeight: 1.7 }}>
-        {memorial.moreDetails ||
-          "Their journey, kindness, and memories continue to live in the hearts they touched."}
-      </Typography>
-    </Paper>
-
-    {/* WEBSITE + PLAN INFO */}
-    <Paper
-      elevation={2}
-      sx={{
-        p: 2.5,
-        borderRadius: 4,
-        background: "#f4fafb",
-      }}
-    >
-      <Typography>
-        <strong>Memorial Page:</strong> {memorial.website}
-      </Typography>
-
-      <Typography>
-        <strong>Plan:</strong> {memorial.plan}
-      </Typography>
-
-      <Typography>
-        <strong>Privacy:</strong>{" "}
-        {memorial.privacy === "public" ? "Public – Anybody can view" : "Private – Only allowed viewers"}
-      </Typography>
-    </Paper>
-  </Box>
-</TabPanel>
-
-
-      {/* MESSAGES */}
       <TabPanel value={tab} index={1}>
-        <Typography
-          variant="h5"
-          fontWeight={700}
-          sx={{ color: "#0b2c52", mb: 3 }}
-        >
-          Heartfelt Messages
-        </Typography>
-
-        {textTributes.length === 0 && (
-          <Typography color="text.secondary">
-            No messages shared yet — be the first to honor their memory.
-          </Typography>
-        )}
-
-        {textTributes.map((t) => (
-          <Paper
-            key={t._id}
-            sx={{
-              p: 2.5,
-              mb: 2,
-              borderRadius: 2,
-              backgroundColor: "#fffaf3",
-              borderLeft: "4px solid #b68b43",
-            }}
-          >
-            <Typography fontWeight={700} sx={{ color: "#0b2c52" }}>
-              {t.userId?.name || "Anonymous"}
-            </Typography>
-
-            <Typography sx={{ mt: 1, fontSize: 16 }}>{t.text}</Typography>
-
-            <Typography
-              variant="caption"
-              sx={{ mt: 1, display: "block", color: "#795c34" }}
-            >
-              {new Date(t.createdAt).toLocaleString()}
-            </Typography>
-          </Paper>
-        ))}
+        <MessageTributes memorialId={memorial._id} tab={tab} />
       </TabPanel>
 
       {/* PHOTOS */}
       <TabPanel value={tab} index={2}>
+        {/* Upload Section */}
+        {isUser && (
+          <Paper
+            sx={{
+              p: 3,
+              mb: 4,
+              borderRadius: 4,
+              background: "#f7faff",
+              border: "1px solid #d9e5f7",
+            }}
+            elevation={0}
+          >
+            <Typography variant="h6" fontWeight={700} sx={{ color: "#0b2c52" }}>
+              Share a Photo Memory
+            </Typography>
+
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Add a photo with a short message to honor their memory.
+            </Typography>
+
+            <TextField
+              fullWidth
+              label="Description (optional)"
+              multiline
+              rows={2}
+              value={photoDescription}
+              onChange={(e) => setPhotoDescription(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+              style={{ marginBottom: 16 }}
+            />
+
+            <Button
+              variant="contained"
+              sx={{
+                background: "#0b2c52",
+                "&:hover": { background: "#09305f" },
+                fontWeight: "600",
+              }}
+              onClick={uploadPhoto}
+            >
+              Upload Photo
+            </Button>
+          </Paper>
+        )}
+
+        {/* Section Header */}
         <Typography
-          variant="h5"
+          variant="h4"
           fontWeight={700}
           sx={{ color: "#0b2c52", mb: 3 }}
         >
           Photo Memories
         </Typography>
 
-        {photoTributes.length === 0 && (
-          <Typography color="text.secondary">No photos added yet.</Typography>
+        {photos.length === 0 && !loading && (
+          <Typography color="text.secondary">
+            No photos have been added yet. Be the first to share a memory.
+          </Typography>
         )}
 
-        <Grid container spacing={2}>
-          {photoTributes.map((t) => (
-            <Grid item xs={6} sm={4} md={3} key={t._id}>
-              <img
-                src={t.mediaUrl}
-                alt="tribute"
-                style={{
-                  width: "100%",
-                  borderRadius: 12,
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+        {/* Instagram Grid */}
+        <Grid container spacing={3}>
+          {photos.map((t) => (
+            <Grid item xs={12} sm={6} md={4} key={t._id}>
+              <Paper
+                elevation={3}
+                sx={{
+                  borderRadius: 4,
+                  overflow: "hidden",
+                  boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+                  transition: "transform 0.2s ease",
+                  cursor: "pointer",
+                  "&:hover": { transform: "translateY(-4px)" },
                 }}
-              />
+              >
+                <img
+                  src={t.url}
+                  alt="tribute"
+                  style={{
+                    width: "100%",
+                    height: 260,
+                    objectFit: "cover",
+                  }}
+                />
+
+                <Box sx={{ p: 2 }}>
+                  <Typography fontWeight={700} sx={{ color: "#0b2c52", mb: 1 }}>
+                    {t.userId?.name || "Anonymous"}
+                  </Typography>
+
+                  {t.caption && (
+                    <Typography
+                      color="text.secondary"
+                      sx={{ mb: 1, fontSize: "0.9rem" }}
+                    >
+                      {t.caption}
+                    </Typography>
+                  )}
+
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ fontSize: "0.8rem" }}
+                  >
+                    {new Date(t.createdAt).toLocaleString()}
+                  </Typography>
+                </Box>
+              </Paper>
             </Grid>
           ))}
         </Grid>
+
+        {/* Loading Skeleton */}
+        {loading && (
+          <Box sx={{ mt: 3 }}>
+            <Grid container spacing={3}>
+              {[1, 2, 3].map((s) => (
+                <Grid key={s} item xs={12} sm={6} md={4}>
+                  <Skeleton variant="rectangular" width="100%" height={260} />
+                  <Skeleton width="60%" sx={{ mt: 1 }} />
+                  <Skeleton width="40%" />
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        )}
+
+        {/* Load More button fallback */}
+        {hasMore && !loading && (
+          <Box sx={{ textAlign: "center", mt: 3 }}>
+            <Button
+              variant="outlined"
+              onClick={loadPhotos}
+              sx={{ borderColor: "#0b2c52", color: "#0b2c52" }}
+            >
+              Load More
+            </Button>
+          </Box>
+        )}
       </TabPanel>
 
       {/* VIDEOS */}
@@ -339,45 +350,7 @@ const MemorialTabs = ({ memorial, tributes }: MemorialTabsProps) => {
 
       {/* AUDIO Message */}
       <TabPanel value={tab} index={4}>
-        <Typography
-          variant="h5"
-          fontWeight={700}
-          sx={{ color: "#0b2c52", mb: 3 }}
-        >
-          Audio Messages
-        </Typography>
-
-        {audioTributes.length === 0 && (
-          <Typography color="text.secondary">No audio tributes yet.</Typography>
-        )}
-
-        {audioTributes.map((t) => (
-          <Paper
-            key={t._id}
-            sx={{
-              p: 2.5,
-              mb: 2,
-              borderRadius: 2,
-              backgroundColor: "#fff8ea",
-              borderLeft: "4px solid #b68b43",
-            }}
-          >
-            <Typography fontWeight={700} sx={{ color: "#0b2c52" }}>
-              {t.userId?.name || "Anonymous"}
-            </Typography>
-
-            <audio controls style={{ width: "100%", marginTop: 10 }}>
-              <source src={t.mediaUrl} />
-            </audio>
-
-            <Typography
-              variant="caption"
-              sx={{ mt: 1, display: "block", color: "#795c34" }}
-            >
-              {new Date(t.createdAt).toLocaleString()}
-            </Typography>
-          </Paper>
-        ))}
+        <AudioTributes memorialId={memorial._id} isUser={isUser} tab={tab} />
       </TabPanel>
     </Paper>
   );

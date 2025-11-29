@@ -21,30 +21,34 @@ const MemorialHero = ({ memorial }: Props) => {
   const heroInputRef = useRef<HTMLInputElement | null>(null);
   const profileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Preview images (before upload)
   const [heroPreview, setHeroPreview] = useState<string | null>(null);
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
 
-  // API upload mutation
-  const uploadMutation = useMutation({
-    mutationFn: async (formData: FormData) => {
-      return axiosInstance.post(
-        `/memorials/${memorial._id}/upload-image`,
-        formData
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(["memorial", memorial.website]);
-      setHeroPreview(null);
-      setProfilePreview(null);
-    },
-  });
+  // UPLOAD MUTATION
+const uploadMutation = useMutation({
+  mutationFn: async (formData: FormData) => {
+    return axiosInstance.post(
+      `/memorials/${memorial._id}/upload-image`,
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" }, // <-- REQUIRED
+      }
+    );
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries(["memorial", memorial.website]);
+    setHeroPreview(null);
+    setProfilePreview(null);
+  },
+});
+
 
   const handleUpload = (file: File, type: "hero" | "profile") => {
-    const form = new FormData();
-    form.append("file", file);
-    form.append("type", type);
-    uploadMutation.mutate(form);
+    const formData = new FormData();
+    formData.append("media", file); // MUST MATCH upload.single("media")
+    formData.append("type", type);
+
+    uploadMutation.mutate(formData);
   };
 
   const handlePreview = (
@@ -52,14 +56,17 @@ const MemorialHero = ({ memorial }: Props) => {
     type: "hero" | "profile"
   ) => {
     if (!e.target.files?.[0]) return;
+
     const file = e.target.files[0];
+    const preview = URL.createObjectURL(file);
 
-    const previewURL = URL.createObjectURL(file);
-
-    if (type === "hero") setHeroPreview(previewURL);
-    else setProfilePreview(previewURL);
+    if (type === "hero") setHeroPreview(preview);
+    else setProfilePreview(preview);
 
     handleUpload(file, type);
+
+    // reset input so user can re-upload same file
+    e.target.value = "";
   };
 
   return (
@@ -72,7 +79,7 @@ const MemorialHero = ({ memorial }: Props) => {
         backgroundPosition: "center",
         backgroundImage: `url(${
           heroPreview ||
-          memorial.heroImage ||
+          memorial?.backgroud ||
           "https://cdn.pixabay.com/photo/2024/09/19/21/07/night-sky-9059825_1280.jpg"
         })`,
         display: "flex",
@@ -81,7 +88,7 @@ const MemorialHero = ({ memorial }: Props) => {
         color: "white",
       }}
     >
-      {/* Upload Hero Image */}
+      {/* HERO IMAGE UPLOAD */}
       {user && (
         <>
           <IconButton
@@ -107,12 +114,12 @@ const MemorialHero = ({ memorial }: Props) => {
         </>
       )}
 
-      {/* Profile picture */}
+      {/* PROFILE IMAGE */}
       <Box sx={{ position: "absolute", right: 30, bottom: -50 }}>
         <Avatar
           src={
             profilePreview ||
-            memorial.profileImage ||
+            memorial?.profile ||
             "https://cdn.pixabay.com/photo/2018/11/10/18/30/all-saints-3807221_1280.jpg"
           }
           sx={{
@@ -123,16 +130,10 @@ const MemorialHero = ({ memorial }: Props) => {
           }}
         />
 
-        {/* Upload Profile Picture */}
         {user && (
           <>
             <IconButton
-              sx={{
-                mt: -4,
-                ml: 14,
-                bgcolor: "white",
-                boxShadow: 2,
-              }}
+              sx={{ mt: -4, ml: 14, bgcolor: "white", boxShadow: 2 }}
               onClick={() => profileInputRef.current?.click()}
             >
               <CameraAltIcon />
@@ -149,11 +150,11 @@ const MemorialHero = ({ memorial }: Props) => {
         )}
       </Box>
 
-      {/* Name Section */}
+      {/* NAME */}
       <Box sx={{ pb: 1 }}>
         <Typography variant="h3" fontWeight={700}>
-          {memorial.firstName} {memorial.middleName || ""}{" "}
-          {memorial.lastName}
+          {memorial?.firstName} {memorial?.middleName || ""}{" "}
+          {memorial?.lastName}
         </Typography>
 
         <Typography sx={{ opacity: 0.9, fontSize: 18 }}>
